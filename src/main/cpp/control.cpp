@@ -67,6 +67,13 @@ JNIEXPORT jint JNICALL Java_com_insightfullogic_honest_1profiler_core_control_Ag
 }
 
 extern "C"
+JNIEXPORT jint JNICALL Java_com_insightfullogic_honest_1profiler_core_control_Agent_getMemorySamplingSize(JNIEnv *env, jclass klass) {
+    Profiler *prof = getProfiler();
+
+    return prof->getMemorySamplingSize();
+}
+
+extern "C"
 JNIEXPORT jstring JNICALL Java_com_insightfullogic_honest_1profiler_core_control_Agent_getFilePath(JNIEnv *env, jclass klass) {
     Profiler *prof = getProfiler();
 
@@ -98,4 +105,11 @@ JNIEXPORT void JNICALL Java_com_insightfullogic_honest_1profiler_core_control_Ag
     Profiler *prof = getProfiler();
 
     prof->setMaxFramesToCapture(maxFramesToCapture);
+}
+
+extern "C"
+JNIEXPORT void JNICALL Java_com_insightfullogic_honest_1profiler_core_control_Agent_setMemorySamplingSize(JNIEnv *env, jclass klass, jint size) {
+    Profiler *prof = getProfiler();
+
+    prof->setMemorySamplingSize(size);
 }

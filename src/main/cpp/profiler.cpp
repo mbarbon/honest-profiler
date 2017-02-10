@@ -1,4 +1,5 @@
 #include "profiler.h"
+#include "memtrace.h"
 
 ASGCTType Asgct::asgct_;
 
@@ -67,7 +68,7 @@ bool Profiler::lookupFrameInformation(const JVMPI_CallFrame &frame,
     return true;
 }
 
-void Profiler::handle(int signum, siginfo_t *info, void *context) {
+void Profiler::handle(int signum, siginfo_t *info, void *context, jlong samples) {
     IMPLICITLY_USE(signum);
     IMPLICITLY_USE(info);
     SimpleSpinLockGuard<false> guard(ongoingConf); // sync buffer
@@ -92,7 +93,7 @@ void Profiler::handle(int signum, siginfo_t *info, void *context) {
     }
 
     // log all samples, failures included, let the post processing sift through the data
-    buffer->push(spec, trace, threadInfo);
+    buffer->push(spec, trace, threadInfo, samples);
 }
 
 bool Profiler::start(JNIEnv *jniEnv) {
@@ -110,12 +111,29 @@ bool Profiler::start(JNIEnv *jniEnv) {
     if (reloadConfig)
         configure();
 
+    if (configuration_->memorySampleSize)
+        return startMemory(jniEnv);
+    else
+        return startCpu(jniEnv);
+}
+
+bool Profiler::startCpu(JNIEnv *jniEnv) {
+    /* within critical section */
+
     // reference back to Profiler::handle on the singleton
     // instance of Profiler
     handler_->SetAction(&bootstrapHandle);
-    processor->start(jniEnv);
+    processor->start(jniEnv, true);
     bool res = handler_->updateSigprofInterval();
     return res;
+}
+
+bool Profiler::startMemory(JNIEnv *jniEnv) {
+    /* within critical section */
+
+    StartMemoryProfiling();
+    processor->start(jniEnv, false);
+    return true;
 }
 
 void Profiler::stop() {
@@ -127,9 +145,25 @@ void Profiler::stop() {
         return;
     }
 
+    if (configuration_->memorySampleSize)
+        stopMemory();
+    else
+        stopCpu();
+}
+
+void Profiler::stopCpu() {
+    /* Make sure it doesn't overlap with configure */
+
     handler_->stopSigprof();
     processor->stop();
     signal(SIGPROF, SIG_IGN);
+}
+
+void Profiler::stopMemory() {
+    /* Make sure it doesn't overlap with configure */
+
+    StopMemoryProfiling();
+    processor->stop();
 }
 
 bool Profiler::isRunning() {
@@ -202,6 +236,23 @@ void Profiler::setMaxFramesToCapture(int maxFramesToCapture) {
     reloadConfig = true;
 }
 
+void Profiler::setMemorySamplingSize(int size) {
+    /* Make sure it doesn't overlap with other sets */
+    SimpleSpinLockGuard<true> guard(ongoingConf);
+
+    if (__is_running()) {
+        TRACE(Profiler, kTraceProfilerSetMemorySamplingFailed);
+        logError("WARN: Unable to modify running profiler\n");
+        return;
+    }
+
+    TRACE(Profiler, kTraceProfilerSetMemorySamplingOk);
+
+    int res = size >= 0 ? size : 0;
+    liveConfiguration->memorySampleSize = res;
+    reloadConfig = true;
+}
+
 /* return copy of the string */
 std::string Profiler::getFilePath() {
     /* Make sure it doesn't overlap with setFilePath */
@@ -227,6 +278,11 @@ int Profiler::getSamplingIntervalMax() {
 int Profiler::getMaxFramesToCapture() {
     SimpleSpinLockGuard<false> guard(ongoingConf); // nonblocking
     return liveConfiguration->maxFramesToCapture;
+}
+
+int Profiler::getMemorySamplingSize() {
+    SimpleSpinLockGuard<false> guard(ongoingConf); // nonblocking
+    return liveConfiguration->memorySampleSize;
 }
 
 void Profiler::configure() {
@@ -266,6 +322,14 @@ void Profiler::configure() {
         if (buffer) delete buffer;
         configuration_->maxFramesToCapture = liveConfiguration->maxFramesToCapture;
         buffer = new CircularQueue(*writer, configuration_->maxFramesToCapture);
+    }
+
+    needsUpdate = needsUpdate ||
+                  configuration_->memorySampleSize != liveConfiguration->memorySampleSize;
+    if (needsUpdate) {
+        configuration_->memorySampleSize = liveConfiguration->memorySampleSize;
+        SetupMemoryProfiling(configuration_->memorySampleSize);
+        StartMemoryProfiling();
     }
 
     needsUpdate = needsUpdate ||

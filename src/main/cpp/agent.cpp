@@ -8,6 +8,7 @@
 #include "thread_map.h"
 #include "profiler.h"
 #include "controller.h"
+#include "memtrace.h"
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
 #define GETENV_NEW_THREAD_ASYNC_UNSAFE
@@ -74,6 +75,9 @@ void JNICALL OnVMInit(jvmtiEnv *jvmti, JNIEnv *jniEnv, jthread thread) {
     if (CONFIGURATION->host != NULL && CONFIGURATION->port != NULL) {
         controller->start();
     }
+
+    if (CONFIGURATION->start)
+        prof->start(jniEnv);
 #endif
 }
 
@@ -301,6 +305,8 @@ static void parseArguments(char *options, ConfigurationOptions &configuration) {
                 configuration.port = safe_copy_string(value, next);
             } else if (strstr(key, "maxFrames") == key) {
                 configuration.maxFramesToCapture = atoi(value);
+            } else if (strstr(key, "memorySampleSize") == key) {
+                configuration.memorySampleSize = atoi(value);
             } else {
                 logError("WARN: Unknown configuration option: %s\n", key);
             }
@@ -343,6 +349,13 @@ AGENTEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved
         return 1;
     }
 
+    if (CONFIGURATION->memorySampleSize) {
+        if (!SetupMemoryProfiling(CONFIGURATION->memorySampleSize)) {
+            logError("ERROR: Failed to setup memory tracing\n");
+            return 1;
+        }
+    }
+
     Asgct::SetAsgct(Accessors::GetJvmFunction<ASGCTType>("AsyncGetCallTrace"));
 
     prof = new Profiler(jvm, jvmti, CONFIGURATION, threadMap);
@@ -363,7 +376,11 @@ AGENTEXPORT void JNICALL Agent_OnUnload(JavaVM *vm) {
 }
 
 void bootstrapHandle(int signum, siginfo_t *info, void *context) {
-    prof->handle(signum, info, context);
+    prof->handle(signum, info, context, 1);
+}
+
+void bootstrapMemoryHandle(void *context, jlong samples) {
+    prof->handle(-1, NULL, context, samples);
 }
 
 void logError(const char *__restrict format, ...) {

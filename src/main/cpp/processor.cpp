@@ -35,7 +35,8 @@ void Processor::run() {
         }
 
         if (popped > 200) {
-            if (!handler_.updateSigprofInterval()) {
+            if (updateInterval_.load(std::memory_order_relaxed) &&
+                  !handler_.updateSigprofInterval()) {
                 break;
             }
             popped = 0;
@@ -67,11 +68,12 @@ void callbackToRunProcessor(jvmtiEnv *jvmti_env, JNIEnv *jni_env, void *arg) {
     processor->run();
 }
 
-void Processor::start(JNIEnv *jniEnv) {
+void Processor::start(JNIEnv *jniEnv, bool updateInterval) {
     TRACE(Processor, kTraceProcessorStart);
     jvmtiError result;
 
     std::cout << "Starting sampling\n";
+    updateInterval_.store(updateInterval, std::memory_order_relaxed);
     isRunning_.store(true, std::memory_order_relaxed);
     workerDone.test_and_set(std::memory_order_relaxed); // initial is true
     jthread thread = newThread(jniEnv, "Honest Profiler Processing Thread");

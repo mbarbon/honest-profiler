@@ -78,15 +78,15 @@ jint LogWriter::getLineNo(jint bci, jmethodID methodId) {
     return lineno;
 }
 
-void LogWriter::record(const JVMPI_CallTrace &trace, ThreadBucket *info) {
+void LogWriter::record(const JVMPI_CallTrace &trace, ThreadBucket *info, jlong samples) {
     timespec spec;
     TimeUtils::current_utc_time(&spec);
 
     record(spec, trace, info);
 }
 
-void LogWriter::record(const timespec &ts, const JVMPI_CallTrace &trace, ThreadBucket *info) {
-    recordTraceStart(trace.num_frames, (map::HashType)trace.env_id, ts, info);
+void LogWriter::record(const timespec &ts, const JVMPI_CallTrace &trace, ThreadBucket *info, jlong samples) {
+    recordTraceStart(trace.num_frames, (map::HashType)trace.env_id, ts, info, samples);
 
     for (int i = 0; i < trace.num_frames; i++) {
         JVMPI_CallFrame frame = trace.frames[i];
@@ -138,7 +138,7 @@ void LogWriter::inspectThread(map::HashType &threadId, ThreadBucket *info) {
     output_.flush();
 }
 
-void LogWriter::recordTraceStart(const jint numFrames, map::HashType envHash, ThreadBucket *info) {
+void LogWriter::recordTraceStart(const jint numFrames, map::HashType envHash, ThreadBucket *info, jlong samples) {
     map::HashType threadId = -envHash;
 
     inspectThread(threadId, info);
@@ -146,10 +146,11 @@ void LogWriter::recordTraceStart(const jint numFrames, map::HashType envHash, Th
     output_.put(TRACE_START);
     writeValue(numFrames);
     writeValue(threadId);
+    writeValue(samples);
     output_.flush();
 }
 
-void LogWriter::recordTraceStart(const jint numFrames, map::HashType envHash, const timespec &ts, ThreadBucket *info) {
+void LogWriter::recordTraceStart(const jint numFrames, map::HashType envHash, const timespec &ts, ThreadBucket *info, jlong samples) {
     map::HashType threadId = -envHash; // mark unrecognized threads with negative id's
     
     inspectThread(threadId, info);
@@ -159,6 +160,7 @@ void LogWriter::recordTraceStart(const jint numFrames, map::HashType envHash, co
     writeValue(threadId);
     writeValue((int64_t)ts.tv_sec);
     writeValue((int64_t)ts.tv_nsec);
+    writeValue(samples);
     output_.flush();
 }
 

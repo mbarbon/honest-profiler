@@ -39,6 +39,7 @@ void safe_free_string(char *&value);
 struct ConfigurationOptions {
     /** Interval in microseconds */
     int samplingIntervalMin, samplingIntervalMax;
+    int memorySampleSize;
     char* logFilePath;
     char* host;
     char* port;
@@ -48,6 +49,7 @@ struct ConfigurationOptions {
     ConfigurationOptions() :
             samplingIntervalMin(DEFAULT_SAMPLING_INTERVAL),
             samplingIntervalMax(DEFAULT_SAMPLING_INTERVAL),
+            memorySampleSize(0),
             logFilePath(NULL),
             host(NULL),
             port(NULL),
@@ -178,6 +180,7 @@ public:
 };
 
 void bootstrapHandle(int signum, siginfo_t *info, void *context);
+void bootstrapMemoryHandle(void *context, jlong samples);
 
 #ifdef __MACH__
 static clock_serv_t osx_clock;

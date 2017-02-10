@@ -35,6 +35,8 @@ public class Agent
 
     public static native int getMaxFramesToCapture();
 
+    public static native int getMemorySamplingSize();
+
     public static native String getFilePath();
 
     public static native void setFilePath(String filePath);
@@ -42,4 +44,6 @@ public class Agent
     public static native void setSamplingInterval(int intervalMin, int intervalMax);
 
     public static native void setMaxFramesToCapture(int maxFramesToCapture);
+
+    public static native void setMemorySamplingSize(int size);
 }

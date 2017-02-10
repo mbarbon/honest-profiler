@@ -71,6 +71,8 @@ set(SOURCE_FILES
     ${SRC}/profiler.cpp
     ${SRC}/profiler.h
     ${SRC}/stacktraces.h
+    ${SRC}/memtrace.cpp
+    ${SRC}/memtrace.h
     ${SRC}/trace.h
     ${SRC}/thread_map.h
     ${SRC}/thread_map.cpp

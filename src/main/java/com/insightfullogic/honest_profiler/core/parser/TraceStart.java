@@ -31,13 +31,15 @@ public final class TraceStart implements LogEvent
     private final long threadId;
     private final long timeSec;
     private final long timeNano;
+    private final long samples;
 
-    public TraceStart(int numberOfFrames, long threadId, long timeSec, long timeNano)
+    public TraceStart(int numberOfFrames, long threadId, long timeSec, long timeNano, long samples)
     {
         this.numberOfFrames = numberOfFrames;
         this.threadId = threadId;
         this.timeSec = timeSec;
         this.timeNano = timeNano;
+        this.samples = samples;
     }
 
     public int getNumberOfFrames()
@@ -58,6 +60,10 @@ public final class TraceStart implements LogEvent
     public long getTraceEpochNano()
     {
         return timeNano;
+    }
+
+    public long getSamples() {
+        return samples;
     }
 
     @Override

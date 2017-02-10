@@ -2,14 +2,14 @@
 #include <iostream>
 #include <unistd.h>
 
-bool CircularQueue::push(const JVMPI_CallTrace &item, ThreadBucket *info) {
+bool CircularQueue::push(const JVMPI_CallTrace &item, ThreadBucket *info, jlong samples) {
     timespec spec;
     TimeUtils::current_utc_time(&spec);
 
-    return push(spec, item, info);
+    return push(spec, item, info, samples);
 }
 
-bool CircularQueue::push(const timespec &ts, const JVMPI_CallTrace &item, ThreadBucket *info) {
+bool CircularQueue::push(const timespec &ts, const JVMPI_CallTrace &item, ThreadBucket *info, jlong samples) {
     size_t currentInput;
     size_t nextInput;
     do {
@@ -24,6 +24,7 @@ bool CircularQueue::push(const timespec &ts, const JVMPI_CallTrace &item, Thread
     buffer[currentInput].tspec.tv_sec = ts.tv_sec;
     buffer[currentInput].tspec.tv_nsec = ts.tv_nsec;
     buffer[currentInput].info = info;
+    buffer[currentInput].samples = samples;
     buffer[currentInput].is_committed.store(COMMITTED, std::memory_order_release);
 
     return true;
@@ -57,7 +58,7 @@ bool CircularQueue::pop() {
         usleep(1);
     }
 
-    listener_.record(buffer[current_output].tspec, buffer[current_output].trace, buffer[current_output].info);
+    listener_.record(buffer[current_output].tspec, buffer[current_output].trace, buffer[current_output].info, buffer[current_output].samples);
     
     // 0 out all frames so the next write is clean
     JVMPI_CallFrame *fb = frame_buffer_[current_output];

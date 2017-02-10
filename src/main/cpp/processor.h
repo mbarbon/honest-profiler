@@ -26,7 +26,7 @@ public:
           isRunning_(false), handler_(handler), interval_(interval) {
     }
 
-    void start(JNIEnv *jniEnv);
+    void start(JNIEnv *jniEnv, bool updateInterval);
 
     void run();
 
@@ -42,6 +42,8 @@ private:
     CircularQueue& buffer_;
 
     std::atomic_bool isRunning_;
+
+    std::atomic_bool updateInterval_;
 
     std::atomic_flag workerDone;
 

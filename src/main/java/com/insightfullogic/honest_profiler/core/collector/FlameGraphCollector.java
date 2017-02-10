@@ -49,6 +49,7 @@ public class FlameGraphCollector implements LogEventListener
     private FlameTrace trace;
     private List<Long> lastMethodIds = new ArrayList<>();
     private List<Long> currentMethodIds = new ArrayList<>();
+    private long currentSamples;
 
     private static Method unknownMethod = new Method(-1, "<unknown>", "unknown.Unknown", "unknown");
 
@@ -63,6 +64,7 @@ public class FlameGraphCollector implements LogEventListener
         addCurrentTrace();
         lastMethodIds = currentMethodIds;
         currentMethodIds = new ArrayList<>();
+        currentSamples = traceStart.getSamples();
     }
 
     @Override
@@ -107,7 +109,7 @@ public class FlameGraphCollector implements LogEventListener
 
         if (lastMethodIds.equals(currentMethodIds))
         {
-            trace.incrementWeight();
+            trace.incrementWeight(currentSamples);
             return;
         }
 
@@ -116,7 +118,7 @@ public class FlameGraphCollector implements LogEventListener
             .map(method -> this.methods.getOrDefault(method, unknownMethod))
             .collect(toList());
 
-        trace = new FlameTrace(methods, 1);
+        trace = new FlameTrace(methods, currentSamples);
         flameGraph.onNewTrace(trace);
     }
 }

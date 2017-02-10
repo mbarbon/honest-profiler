@@ -55,8 +55,8 @@ public class FlameTrace
         return methods.size() > row ? methods.get(row) : null;
     }
 
-    public void incrementWeight()
+    public void incrementWeight(long increment)
     {
-        weight++;
+        weight += increment;
     }
 }

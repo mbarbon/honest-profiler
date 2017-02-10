@@ -180,11 +180,13 @@ public class LogParser
         long threadId = input.getLong();
         long timeSec = 0L;
         long timeNano = 0L;
+        long samples = 0L;
 
         if (withTime) {
             timeSec = input.getLong();
             timeNano = input.getLong();
         }
+        samples = input.getLong();
 
         // number of frames <= 0 -> error, so log a mock stack frame reflecting the error. Logging errors as frames makes
         // more sense when collecting profiles.
@@ -197,13 +199,13 @@ public class LogParser
             }
 
             // we choose to report errors via frames, so pretend there's a single frame in the trace
-            new TraceStart(1, threadId, timeSec, timeNano).accept(listener);
+            new TraceStart(1, threadId, timeSec, timeNano, samples).accept(listener);
             // we shift the err code by -1 to avoid using the valid NULL jmethodId
             new StackFrame(-1, numberOfFrames - 1).accept(listener);
         }
         else
         {
-            TraceStart traceStart = new TraceStart(numberOfFrames, threadId, timeSec, timeNano);
+            TraceStart traceStart = new TraceStart(numberOfFrames, threadId, timeSec, timeNano, samples);
             traceStart.accept(listener);
         }
     }

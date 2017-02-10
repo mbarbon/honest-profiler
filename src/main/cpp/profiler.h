@@ -84,6 +84,7 @@ public:
         setSamplingInterval(liveConfiguration->samplingIntervalMin,
                             liveConfiguration->samplingIntervalMax);
         setMaxFramesToCapture(liveConfiguration->maxFramesToCapture);
+        setMemorySamplingSize(liveConfiguration->memorySampleSize);
 
         configure();
     }
@@ -92,7 +93,7 @@ public:
 
     void stop();
 
-    void handle(int signum, siginfo_t *info, void *context);
+    void handle(int signum, siginfo_t *info, void *context, jlong samples);
 
     bool isRunning();
 
@@ -106,11 +107,15 @@ public:
 
     int getMaxFramesToCapture();
 
+    int getMemorySamplingSize();
+
     void setFilePath(char *newFilePath);
 
     void setSamplingInterval(int intervalMin, int intervalMax);
 
     void setMaxFramesToCapture(int maxFramesToCapture);
+
+    void setMemorySamplingSize(int size);
 
     ~Profiler();
 
@@ -151,6 +156,12 @@ private:
     void configure();
 
     bool __is_running();
+
+    bool startCpu(JNIEnv *jniEnv);
+    bool startMemory(JNIEnv *jniEnv);
+
+    void stopCpu();
+    void stopMemory();
 
     DISALLOW_COPY_AND_ASSIGN(Profiler);
 };
